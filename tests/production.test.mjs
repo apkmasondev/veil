@@ -31,7 +31,7 @@ test('deployment is pinned to Node 24 and current Pages actions', async () => {
   assert.match(workflow, /node-version: 24/)
   assert.match(workflow, /actions\/checkout@v6/)
   assert.match(workflow, /actions\/configure-pages@v6/)
-  assert.match(workflow, /actions\/upload-pages-artifact@v4/)
+  assert.match(workflow, /actions\/upload-pages-artifact@v5/)
   assert.match(workflow, /actions\/deploy-pages@v5/)
   assert.match(workflow, /VITE_SITE_URL: \$\{\{ steps\.pages\.outputs\.base_url \}\}/)
 })
