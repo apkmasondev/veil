@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { URL } from 'node:url'
 import { resolveReturnTarget } from '../src/lib/navigation.ts'
+import { normalizePublicSiteUrl } from '../src/lib/site-url.ts'
 import { scenes } from '../src/lib/timeline.ts'
 
 const projectFile = (path) => new URL(`../${path}`, import.meta.url)
@@ -42,6 +43,14 @@ test('share metadata uses the deployment URL and an absolute social image', asyn
   assert.match(html, /property="og:url" content="__SITE_URL__"/)
   assert.match(html, /property="og:image" content="__SITE_URL__og\.[a-f0-9]{8}\.jpg"/)
   assert.match(html, /property="og:image:alt"/)
+})
+
+test('public metadata upgrades external Pages URLs to HTTPS', () => {
+  assert.equal(
+    normalizePublicSiteUrl('http://apkmason.dev/veil?preview=1#scene'),
+    'https://apkmason.dev/veil/',
+  )
+  assert.equal(normalizePublicSiteUrl('http://127.0.0.1:4173'), 'http://127.0.0.1:4173/')
 })
 
 test('return navigation accepts safe targets and rejects ambiguous ones', () => {
