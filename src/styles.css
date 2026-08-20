@@ -355,7 +355,8 @@ button { font: inherit; }
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1.15rem;
+  gap: clamp(.72rem, 1.5vh, 1.15rem);
+  max-width: min(48rem, 76vw);
   opacity: 0;
   color: rgba(249, 248, 242, .9);
   text-shadow: 0 2px 20px rgba(25, 28, 30, .34);
@@ -363,10 +364,18 @@ button { font: inherit; }
 }
 
 .final-state--interactive { pointer-events: auto; }
+.final-state__signature,
+.final-state__epilogue,
+.final-state__actions { opacity: 0; will-change: opacity, transform; }
 .final-state__signature { display: grid; grid-template-columns: auto clamp(2rem, 5vw, 5rem) auto; align-items: end; gap: 1rem; }
 .final-state__title { font-size: clamp(1.6rem, 3.4vw, 4rem); line-height: .8; letter-spacing: .32em; font-weight: 650; }
 .final-state__line { height: 1px; margin-bottom: .24rem; background: currentColor; opacity: .5; }
-.final-state p { margin: 0; font-family: Iowan Old Style, Baskerville, "Times New Roman", serif; font-size: clamp(.82rem, 1.05vw, 1.18rem); line-height: 1.14; font-style: italic; }
+.final-state__closing { margin: 0; font-family: Iowan Old Style, Baskerville, "Times New Roman", serif; font-size: clamp(.82rem, 1.05vw, 1.18rem); line-height: 1.14; font-style: italic; }
+.final-state__epilogue { display: flex; flex-direction: column; align-items: flex-start; gap: .55rem; }
+.final-state__epilogue-title { margin: 0; font-size: clamp(.9rem, 1.25vw, 1.35rem); line-height: .96; font-weight: 620; letter-spacing: .13em; text-transform: uppercase; }
+.final-state__proof { display: flex; align-items: center; flex-wrap: wrap; gap: .3rem .65rem; margin: 0; color: rgba(249,248,242,.58); font-size: .48rem; line-height: 1.4; letter-spacing: .19em; text-transform: uppercase; }
+.final-state__proof span { display: inline-flex; align-items: center; white-space: nowrap; }
+.final-state__proof span + span::before { content: "/"; margin-right: .65rem; color: rgba(249,248,242,.34); }
 .final-state__actions { display: flex; align-items: center; gap: 1.6rem; }
 .final-state__actions button { min-height: 2.75rem; padding: 0; border: 0; color: rgba(249,248,242,.76); background: transparent; font-size: .56rem; letter-spacing: .24em; text-transform: uppercase; cursor: pointer; }
 .final-state__actions button span { display: inline-block; transition: transform .25s ease; }
@@ -434,11 +443,15 @@ button { font: inherit; }
   .motion-cue__signal { height: 1.9rem; }
   .motion-cue__copy--desktop { display: none; }
   .motion-cue__copy--mobile { display: block; }
-  .final-state { left: 1.2rem; right: 3.8rem; bottom: max(1.2rem, calc(env(safe-area-inset-bottom) + .5rem)); gap: .7rem; }
+  .final-state { left: 1.2rem; right: 3.8rem; bottom: max(1.2rem, calc(env(safe-area-inset-bottom) + .5rem)); max-width: none; gap: .62rem; }
   .final-state__signature { grid-template-columns: auto 1fr; gap: .5rem .7rem; }
   .final-state__title { font-size: 1.45rem; }
   .final-state__line { grid-column: 2; }
-  .final-state p { grid-column: 1 / -1; font-size: .82rem; }
+  .final-state__closing { grid-column: 1 / -1; font-size: .78rem; }
+  .final-state__epilogue { gap: .42rem; }
+  .final-state__epilogue-title { font-size: clamp(.82rem, 4vw, 1rem); letter-spacing: .11em; }
+  .final-state__proof { gap: .16rem .38rem; max-width: 21rem; font-size: .42rem; line-height: 1.35; letter-spacing: .14em; }
+  .final-state__proof span + span::before { margin-right: .38rem; }
   .final-state__actions { gap: 1.25rem; }
   .final-state__actions button { min-height: 2.4rem; font-size: .5rem; }
 }
@@ -448,7 +461,11 @@ button { font: inherit; }
   .story--descent, .story--arrival { top: 17%; }
   .story__title { font-size: clamp(2.2rem, 8vw, 4.5rem); }
   .project-mark { top: max(.7rem, env(safe-area-inset-top)); }
-  .final-state { bottom: max(.8rem, env(safe-area-inset-bottom)); }
+  .final-state { right: 3.8rem; bottom: max(.65rem, env(safe-area-inset-bottom)); display: grid; grid-template-columns: auto minmax(12rem, 1fr); column-gap: clamp(1rem, 3vw, 2rem); row-gap: .35rem; align-items: end; max-width: none; }
+  .final-state__signature { align-self: center; }
+  .final-state__epilogue { align-self: center; }
+  .final-state__actions { grid-column: 2; }
+  .final-state__proof { max-width: 25rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -100,6 +100,9 @@ export function App() {
   const chapterIndexRef = useRef<HTMLSpanElement>(null)
   const chapterLabelRef = useRef<HTMLSpanElement>(null)
   const finalRef = useRef<HTMLDivElement>(null)
+  const finalSignatureRef = useRef<HTMLDivElement>(null)
+  const finalEpilogueRef = useRef<HTMLDivElement>(null)
+  const finalActionsRef = useRef<HTMLDivElement>(null)
   const introCueRef = useRef<HTMLDivElement>(null)
   const traceRef = useRef<HTMLDivElement>(null)
   const traceValueRef = useRef<HTMLSpanElement>(null)
@@ -314,9 +317,26 @@ export function App() {
         if (traceRef.current) traceRef.current.setAttribute('aria-valuenow', String(depthPercent))
       }
 
-      const finalOpacity = smoothstep(0.965, 0.995, current)
+      const finalOpacity = smoothstep(0.958, 0.974, current)
+      const signatureOpacity = smoothstep(0.962, 0.981, current)
+      const epilogueOpacity = smoothstep(0.98, 0.994, current)
+      const actionsOpacity = smoothstep(0.989, 0.999, current)
+
       if (finalRef.current) finalRef.current.style.opacity = finalOpacity.toFixed(4)
-      const shouldEnableFinal = finalOpacity >= 0.55
+      if (finalSignatureRef.current) {
+        finalSignatureRef.current.style.opacity = signatureOpacity.toFixed(4)
+        finalSignatureRef.current.style.transform = `translate3d(0, ${(1 - signatureOpacity) * 9}px, 0)`
+      }
+      if (finalEpilogueRef.current) {
+        finalEpilogueRef.current.style.opacity = epilogueOpacity.toFixed(4)
+        finalEpilogueRef.current.style.transform = `translate3d(0, ${(1 - epilogueOpacity) * 12}px, 0)`
+      }
+      if (finalActionsRef.current) {
+        finalActionsRef.current.style.opacity = actionsOpacity.toFixed(4)
+        finalActionsRef.current.style.transform = `translate3d(0, ${(1 - actionsOpacity) * 7}px, 0)`
+      }
+
+      const shouldEnableFinal = actionsOpacity >= 0.55
       if (shouldEnableFinal !== finalInteractive) {
         finalInteractive = shouldEnableFinal
         finalRef.current?.classList.toggle('final-state--interactive', shouldEnableFinal)
@@ -447,12 +467,18 @@ export function App() {
           </div>
 
           <div className="final-state" ref={finalRef} aria-hidden="true" inert>
-            <div className="final-state__signature">
+            <div className="final-state__signature" ref={finalSignatureRef}>
               <span className="final-state__title">VEIL</span>
               <span className="final-state__line" />
-              <p>What felt like falling<br />was a way through.</p>
+              <p className="final-state__closing">What felt like falling<br />was a way through.</p>
             </div>
-            <div className="final-state__actions">
+            <div className="final-state__epilogue" ref={finalEpilogueRef}>
+              <p className="final-state__epilogue-title">Nothing here moved<br />without you.</p>
+              <p className="final-state__proof">
+                <span>4 films</span><span>960 frames</span><span>one scroll-controlled passage</span>
+              </p>
+            </div>
+            <div className="final-state__actions" ref={finalActionsRef}>
               {returnTarget && (
                 <button ref={(node) => { finalActionRefs.current[0] = node }} type="button" tabIndex={-1} onClick={returnFromJourney}>
                   <span aria-hidden="true">←</span> Return
@@ -483,6 +509,7 @@ export function App() {
           <p>Depth learns your shape.</p>
           <p>Form gives way.</p>
           <p>The far side remembers you. What felt like falling was a way through.</p>
+          <p>Nothing here moved without you. Four films, 960 frames, one scroll-controlled passage.</p>
         </section>
       </main>
     </>
