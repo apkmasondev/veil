@@ -2,7 +2,11 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   dominantSceneIndex,
-  SAFE_DURATION,
+  MASTER_DURATION,
+  MASTER_VIDEO,
+  SAFE_MASTER_DURATION,
+  SAFE_SCENE_DURATION,
+  masterTime,
   sceneOpacity,
   scenes,
   sceneTime,
@@ -32,7 +36,16 @@ test('adjacent scenes share an exact boundary without a timeline gap', () => {
 
 test('video time is clamped to the final safe frame in both directions', () => {
   assert.equal(sceneTime(scenes[0], -1), 0)
-  assert.equal(sceneTime(scenes.at(-1), 2), SAFE_DURATION)
+  assert.equal(sceneTime(scenes.at(-1), 2), SAFE_SCENE_DURATION)
+  assert.equal(masterTime(-1), 0)
+  assert.equal(masterTime(2), SAFE_MASTER_DURATION)
+})
+
+test('master timeline maps every narrative seam to the first frame of its next source', () => {
+  for (let index = 1; index < scenes.length; index += 1) {
+    assert.equal(masterTime(scenes[index].start), index * 10)
+  }
+  assert.equal(MASTER_DURATION, 40)
 })
 
 test('dominant scene resolves the opening, breakthrough and arrival', () => {
@@ -41,11 +54,11 @@ test('dominant scene resolves the opening, breakthrough and arrival', () => {
   assert.equal(dominantSceneIndex(1), 3)
 })
 
-test('desktop and mobile assets are distinct and production-addressable', () => {
+test('desktop and mobile masters are distinct and production-addressable', () => {
+  assert.notEqual(MASTER_VIDEO.desktop, MASTER_VIDEO.mobile)
+  assert.match(MASTER_VIDEO.desktop, /^media\/veil-master-desktop\.[a-f0-9]{8}\.mp4$/)
+  assert.match(MASTER_VIDEO.mobile, /^media\/veil-master-mobile\.[a-f0-9]{8}\.mp4$/)
   for (const scene of scenes) {
-    assert.notEqual(scene.desktop, scene.mobile)
-    assert.match(scene.desktop, /^media\/.+-desktop\.[a-f0-9]{8}\.mp4$/)
-    assert.match(scene.mobile, /^media\/.+-mobile\.[a-f0-9]{8}\.mp4$/)
     assert.match(scene.poster, /^media\/poster-.+\.[a-f0-9]{8}\.webp$/)
   }
 })

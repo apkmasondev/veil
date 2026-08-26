@@ -5,12 +5,12 @@ import { readFile } from 'node:fs/promises'
 import { URL } from 'node:url'
 import { resolveReturnTarget } from '../src/lib/navigation.ts'
 import { normalizePublicSiteUrl } from '../src/lib/site-url.ts'
-import { scenes } from '../src/lib/timeline.ts'
+import { MASTER_VIDEO, scenes } from '../src/lib/timeline.ts'
 
 const projectFile = (path) => new URL(`../${path}`, import.meta.url)
 
 test('every public media asset exists and matches its cache fingerprint', async () => {
-  const assets = scenes.flatMap(({ desktop, mobile, poster }) => [desktop, mobile, poster])
+  const assets = [MASTER_VIDEO.desktop, MASTER_VIDEO.mobile, ...scenes.map(({ poster }) => poster)]
   assets.push('og.b6787d5b.jpg')
 
   for (const asset of assets) {

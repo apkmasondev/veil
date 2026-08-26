@@ -46,7 +46,7 @@ button { font: inherit; }
   background: #070b10;
 }
 
-.scroll-space { height: 920vh; height: 920dvh; }
+.scroll-space { height: 920vh; height: calc(820svh + 100dvh); }
 
 .stage__fallback,
 .media-stack,
@@ -423,7 +423,7 @@ button { font: inherit; }
 @keyframes descend-signal { 0% { transform: translateY(-.8rem); opacity: 0; } 22% { opacity: 1; } 78% { opacity: 1; } 100% { transform: translateY(2.45rem); opacity: 0; } }
 
 @media (max-width: 760px) {
-  .scroll-space { height: 760vh; height: 760dvh; }
+  .scroll-space { height: 760vh; height: calc(660svh + 100dvh); }
   .image-treatment__grain { opacity: .012; }
   .project-mark { grid-template-columns: auto 1.6rem auto; gap: .48rem; font-size: .54rem; }
   .project-mark__label { display: none; }
@@ -470,7 +470,7 @@ button { font: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .scroll-space { height: 430vh; height: 430dvh; }
+  .scroll-space { height: 430vh; height: calc(330svh + 100dvh); }
   .image-treatment__grain, .image-treatment__breath { display: none; }
   .portal-glyph__orbit--inner, .portal-glyph__core, .motion-cue__signal i, .loader__seed { animation: none; transform: none; }
   .loader, .return-control, .return-control::after { transition: none; }

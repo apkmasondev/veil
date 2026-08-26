@@ -4,10 +4,10 @@ import { resolveReturnTarget } from './lib/navigation'
 import {
   dominantSceneIndex,
   FRAME_RATE,
+  MASTER_VIDEO,
+  masterTime,
   sceneLocalProgress,
-  sceneOpacity,
   scenes,
-  sceneTime,
 } from './lib/timeline'
 
 const assetUrl = (path: string) => `${import.meta.env.BASE_URL}${path}`
@@ -86,17 +86,16 @@ export function App() {
   const [ready, setReady] = useState(profile.reducedMotion)
   const [useStills, setUseStills] = useState(profile.reducedMotion)
   const [loadFailed, setLoadFailed] = useState(false)
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
+  const videoRef = useRef<HTMLVideoElement>(null)
   const mediaRefs = useRef<(HTMLElement | null)[]>([])
   const frameCanvasRef = useRef<HTMLCanvasElement>(null)
   const frameContextRef = useRef<CanvasRenderingContext2D | null>(null)
   const desiredSceneRef = useRef(criticalScene)
-  const desiredTimesRef = useRef(scenes.map((scene) => sceneTime(scene, initialProgress)))
-  const paintedFrameRef = useRef({ scene: -1, time: -1 })
+  const desiredTimeRef = useRef(masterTime(initialProgress))
+  const paintedFrameRef = useRef({ time: -1 })
   const storyRefs = useRef<(HTMLDivElement | null)[]>([])
-  const loaded = useRef(new Set<number>())
-  const failedVideos = useRef(new Set<number>())
-  const loadedRequested = useRef(new Set<number>())
+  const loadedRef = useRef(false)
+  const videoFailedRef = useRef(false)
   const chapterIndexRef = useRef<HTMLSpanElement>(null)
   const chapterLabelRef = useRef<HTMLSpanElement>(null)
   const finalRef = useRef<HTMLDivElement>(null)
@@ -116,24 +115,23 @@ export function App() {
     [],
   )
 
-  const paintVideoFrame = useCallback((index: number, video: HTMLVideoElement) => {
+  const paintVideoFrame = useCallback((video: HTMLVideoElement) => {
     const canvas = frameCanvasRef.current
     if (
       useStills ||
       !canvas ||
-      index !== desiredSceneRef.current ||
       video.seeking ||
       video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA ||
       video.videoWidth === 0 ||
       video.videoHeight === 0
     ) return false
 
-    const desired = desiredTimesRef.current[index]
+    const desired = desiredTimeRef.current
     const tolerance = profile.mobile ? 0.17 : 0.13
     if (Math.abs(video.currentTime - desired) > tolerance) return false
 
     const painted = paintedFrameRef.current
-    if (painted.scene === index && Math.abs(painted.time - video.currentTime) < 1 / (FRAME_RATE * 2)) {
+    if (Math.abs(painted.time - video.currentTime) < 1 / (FRAME_RATE * 2)) {
       return true
     }
 
@@ -149,29 +147,29 @@ export function App() {
     if (!context) return false
     frameContextRef.current = context
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
-    canvas.dataset.scene = scenes[index].id
+    canvas.dataset.scene = scenes[desiredSceneRef.current].id
     canvas.dataset.time = video.currentTime.toFixed(3)
     canvas.hidden = false
-    paintedFrameRef.current = { scene: index, time: video.currentTime }
+    paintedFrameRef.current = { time: video.currentTime }
     return true
   }, [profile.mobile, useStills])
 
-  const markLoaded = useCallback((index: number) => {
-    failedVideos.current.delete(index)
-    loaded.current.add(index)
-    if (index === criticalScene) setReady(true)
-  }, [criticalScene])
+  const markLoaded = useCallback(() => {
+    videoFailedRef.current = false
+    loadedRef.current = true
+    setReady(true)
+  }, [])
 
   const retry = useCallback(() => {
     setLoadFailed(false)
-    failedVideos.current.delete(criticalScene)
-    const video = videoRefs.current[criticalScene]
+    videoFailedRef.current = false
+    const video = videoRef.current
     if (video) {
       video.hidden = false
       video.preload = 'auto'
       video.load()
     }
-  }, [criticalScene])
+  }, [])
 
   const continueWithStills = useCallback(() => {
     if (frameCanvasRef.current) frameCanvasRef.current.hidden = true
@@ -183,10 +181,10 @@ export function App() {
   useEffect(() => {
     if (useStills) return
     const timeout = window.setTimeout(() => {
-      if (!loaded.current.has(criticalScene)) setLoadFailed(true)
+      if (!loadedRef.current) setLoadFailed(true)
     }, 12000)
     return () => window.clearTimeout(timeout)
-  }, [criticalScene, useStills])
+  }, [useStills])
 
   useEffect(() => {
     const root = document.documentElement
@@ -201,27 +199,23 @@ export function App() {
     let finalInteractive = false
     let raf = 0
     let resizeRaf = 0
-    const lastSeekAt = [0, 0, 0, 0]
-
-    const ensureLoaded = (index: number) => {
-      if (useStills || loadedRequested.current.has(index)) return
-      const video = videoRefs.current[index]
-      if (!video) return
-      loadedRequested.current.add(index)
-      video.preload = 'auto'
-      video.load()
-    }
-
-    ensureLoaded(criticalScene)
-    if (criticalScene > 0) ensureLoaded(criticalScene - 1)
-    if (criticalScene < scenes.length - 1) ensureLoaded(criticalScene + 1)
+    let lastSeekAt = 0
+    let layoutWidth = window.innerWidth
+    let layoutLandscape = window.innerWidth > window.innerHeight
 
     const onResize = () => {
+      const nextWidth = window.innerWidth
+      const nextLandscape = nextWidth > window.innerHeight
+      const structuralResize = Math.abs(nextWidth - layoutWidth) > 2 || nextLandscape !== layoutLandscape
       const preserved = clamp(window.scrollY / maxScroll)
       cancelAnimationFrame(resizeRaf)
       resizeRaf = requestAnimationFrame(() => {
         maxScroll = Math.max(1, root.scrollHeight - window.innerHeight)
-        window.scrollTo({ top: preserved * maxScroll, behavior: 'instant' })
+        if (structuralResize) {
+          layoutWidth = nextWidth
+          layoutLandscape = nextLandscape
+          window.scrollTo({ top: preserved * maxScroll, behavior: 'instant' })
+        }
       })
     }
 
@@ -255,7 +249,6 @@ export function App() {
         if (media) media.style.opacity = index === activeScene ? '1' : '0'
       })
       scenes.forEach((scene, index) => {
-        const opacity = sceneOpacity(scene, index, current)
         const local = sceneLocalProgress(scene, current)
 
         const story = storyRefs.current[index]
@@ -269,32 +262,26 @@ export function App() {
           story.style.setProperty('--impulse', Math.min(1, Math.abs(smoothedVelocity) * 0.12).toFixed(4))
         }
 
-        // Keep both sides of an opaque seam frame-ready. This prevents a stale
-        // decoded frame from flashing when a fast reverse scroll crosses a cut.
-        const seamPreroll = profile.mobile ? 0.022 : 0.016
-        const nearScene = current >= scene.start - seamPreroll && current <= scene.end + seamPreroll
-        if (!useStills && (opacity > 0.001 || nearScene)) {
-          ensureLoaded(index)
-          const video = videoRefs.current[index]
-          if (video && video.readyState >= HTMLMediaElement.HAVE_METADATA) {
-            const desired = Math.round(sceneTime(scene, current) * FRAME_RATE) / FRAME_RATE
-            desiredTimesRef.current[index] = desired
-            const minInterval = profile.mobile ? 42 : 30
-            const drift = Math.abs(video.currentTime - desired)
-            if (index === activeScene) paintVideoFrame(index, video)
-            if (
-              drift >= 1 / FRAME_RATE &&
-              now - lastSeekAt[index] >= minInterval &&
-              (!video.seeking || drift > 0.22)
-            ) {
-              lastSeekAt[index] = now
-              video.currentTime = desired
-            }
-          }
-        }
       })
 
-      if (failedVideos.current.has(activeScene) && frameCanvasRef.current) {
+      const video = videoRef.current
+      if (!useStills && video && video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+        const desired = Math.round(masterTime(current) * FRAME_RATE) / FRAME_RATE
+        desiredTimeRef.current = desired
+        const minInterval = profile.mobile ? 42 : 30
+        const drift = Math.abs(video.currentTime - desired)
+        paintVideoFrame(video)
+        if (
+          drift >= 1 / FRAME_RATE &&
+          now - lastSeekAt >= minInterval &&
+          (!video.seeking || drift > 0.22)
+        ) {
+          lastSeekAt = now
+          video.currentTime = desired
+        }
+      }
+
+      if (videoFailedRef.current && frameCanvasRef.current) {
         frameCanvasRef.current.hidden = true
       }
 
@@ -304,11 +291,6 @@ export function App() {
         if (chapterIndexRef.current) chapterIndexRef.current.textContent = scenes[activeScene].index
         if (chapterLabelRef.current) chapterLabelRef.current.textContent = scenes[activeScene].label
       }
-
-      // Warm the next decoder while the current chapter still owns the frame.
-      // This is deliberately one scene ahead to avoid downloading all films at once.
-      ensureLoaded(activeScene)
-      if (activeScene < scenes.length - 1) ensureLoaded(activeScene + 1)
 
       const depthPercent = Math.round(current * 100)
       if (depthPercent !== lastDepthPercent) {
@@ -356,7 +338,7 @@ export function App() {
       cancelAnimationFrame(resizeRaf)
       window.removeEventListener('resize', onResize)
     }
-  }, [criticalScene, paintVideoFrame, profile.mobile, profile.reducedMotion, useStills])
+  }, [paintVideoFrame, profile.mobile, profile.reducedMotion, useStills])
 
   const restartJourney = () => {
     window.scrollTo({ top: 0, behavior: profile.reducedMotion ? 'instant' : 'smooth' })
@@ -379,33 +361,31 @@ export function App() {
                 ref={(node) => { mediaRefs.current[index] = node }}
               >
                 <img className="media-layer__poster" src={assetUrl(scene.poster)} alt="" draggable="false" />
-                {!useStills && (
-                  <video
-                    ref={(node) => { videoRefs.current[index] = node }}
-                    className="media-layer__video"
-                    src={assetUrl(profile.mobile ? scene.mobile : scene.desktop)}
-                    muted
-                    playsInline
-                    preload={index === criticalScene ? 'auto' : index === criticalScene + 1 ? 'metadata' : 'none'}
-                    tabIndex={-1}
-                    onLoadedData={(event) => {
-                      event.currentTarget.hidden = false
-                      markLoaded(index)
-                      paintVideoFrame(index, event.currentTarget)
-                    }}
-                    onSeeked={(event) => paintVideoFrame(index, event.currentTarget)}
-                    onError={(event) => {
-                      failedVideos.current.add(index)
-                      event.currentTarget.hidden = true
-                      if (index === desiredSceneRef.current && frameCanvasRef.current) {
-                        frameCanvasRef.current.hidden = true
-                      }
-                      if (index === criticalScene) setLoadFailed(true)
-                    }}
-                  />
-                )}
               </div>
             ))}
+            {!useStills && (
+              <video
+                ref={videoRef}
+                className="media-layer__video"
+                src={assetUrl(profile.mobile ? MASTER_VIDEO.mobile : MASTER_VIDEO.desktop)}
+                muted
+                playsInline
+                preload="auto"
+                tabIndex={-1}
+                onLoadedData={(event) => {
+                  event.currentTarget.hidden = false
+                  markLoaded()
+                  paintVideoFrame(event.currentTarget)
+                }}
+                onSeeked={(event) => paintVideoFrame(event.currentTarget)}
+                onError={(event) => {
+                  videoFailedRef.current = true
+                  event.currentTarget.hidden = true
+                  if (frameCanvasRef.current) frameCanvasRef.current.hidden = true
+                  setLoadFailed(true)
+                }}
+              />
+            )}
           </div>
           <canvas
             className="frame-canvas"
